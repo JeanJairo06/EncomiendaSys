@@ -7,6 +7,7 @@ services:
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
+    #gunicorn config.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - .:/app  # monta el código en tiempo real
     ports:
@@ -25,6 +26,16 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
 volumes:
   postgres_data:
