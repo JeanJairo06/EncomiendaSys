@@ -1,0 +1,18 @@
+<ul class="navbar-nav me-auto">
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'encomienda_lista' %}">
+            Encomiendas
+            {% if nav_retraso > 0 %}
+            {# Badge rojo con el número de encomiendas retrasadas #}
+            <span class="badge bg-danger rounded-pill">{{ nav_retraso }}</span>
+            {% endif %}
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'dashboard' %}">
+            Dashboard
+            {# Mostrar total de activas #}
+            <span class="badge bg-secondary">{{ nav_activas }}</span>
+        </a>
+    </li>
+</ul>

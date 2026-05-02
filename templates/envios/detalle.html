@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}{{ encomienda.codigo }} — Detalle{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h3">
+        <i class="fas fa-box me-2"></i>{{ encomienda.codigo }}
+    </h2>
+    <div>
+        <a href="{% url 'encomienda_lista' %}" class="btn btn-outline-secondary me-2">
+            Volver
+        </a>
+        {# Solo mostrar si no está entregada ni devuelta #}
+        {% if not encomienda.esta_entregada %}
+        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#modalEstado">
+            Cambiar estado
+        </button>
+        {% endif %}
+    </div>
+</div>
+<div class="row">
+    {# Columna izquierda: datos principales #}
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white d-flex justify-content-between">
+                <h5 class="mb-0">Información de la encomienda</h5>
+                <span class="badge-estado badge-{{ encomienda.estado }}">
+                    {{ encomienda.get_estado_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="text-muted mb-1">Remitente</p>
+                        <h6>{{ encomienda.remitente.nombre_completo }}</h6>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="text-muted mb-1">Destinatario</p>
+                        <h6>{{ encomienda.destinatario.nombre_completo }}</h6>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p class="text-muted mb-1">Ruta</p>
+                        <h6>{{ encomienda.ruta }}</h6>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="text-muted mb-1">Peso</p>
+                        <h6>{{ encomienda.peso_kg }} kg</h6>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="text-muted mb-1">Costo</p>
+                        <h6>S/ {{ encomienda.costo_envio|floatformat:2 }}</h6>
+                    </div>
+                </div>
+                {# Alerta de retraso usando @property del modelo #}
+                {% if encomienda.tiene_retraso %}
+                <div class="alert alert-danger mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Esta encomienda tiene {{ encomienda.dias_en_transito }} días en tránsito
+                    y superó la fecha de entrega estimada.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {# Historial de estados #}
+        <div class="card shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Historial de estados</h5>
+            </div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Anterior</th>
+                            <th>Nuevo</th>
+                            <th>Empleado</th>
+                            <th>Observación< /th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in historial %}
+                        <tr>
+                            <td>{{ h.fecha_cambio|date:'d/m/Y H:i' }}</td>
+                            <td><span class="badge-estado badge-{{ h.estado_anterior }}">{{
+                                    h.get_estado_anterior_display }}</span></td>
+                            <td><span class="badge-estado badge-{{ h.estado_nuevo }}">{{
+                                    h.get_estado_nuevo_display }}</span></td>
+                            <td>{{ h.empleado }}</td>
+                            <td>{{ h.observacion|default:'—' }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5">Sin cambios registrados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{# JS adicional: solo carga en esta pagina #}
+{% block extra_js %}
+<script>
+    // Auto - seleccionar el estado actual en el modal
+    document.getElementById('selectEstado').value = '{{ encomienda.estado }}';
+</script>
+{% endblock %}

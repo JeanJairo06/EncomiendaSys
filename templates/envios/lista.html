@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}Encomiendas{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h3">
+        <i class="fas fa-boxes me-2"></i>Encomiendas
+    </h2>
+    <a href="{% url 'encomienda_crear' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i>Nueva
+    </a>
+</div>
+{# Formulario de busqueda y filtros (metodo GET) #}
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-6">
+        <input type="text" name="q" value="{{ request.GET.q }}" class="form-control"
+            placeholder="Buscar por código o cliente...">
+    </div>
+    <div class="col-md-4">
+        <select name="estado" class="form-select">
+            <option value="">Todos los estados</option>
+            {% for valor, etiqueta in estados %}
+            <option value="{{ valor }}" {% if estado_activo==valor %}selected{% endif %}>
+                {{ etiqueta }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-outline-primary w-100">Filtrar</button>
+    </div>
+</form>
+{# Tabla de encomiendas #}
+<div class="card shadow">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Remitente</th>
+                    <th>Ruta</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for enc in encomiendas %}
+                <tr>
+                    <td><code>{{ enc.codigo }}</code></td>
+                    <td>{{ enc.remitente.nombre_completo }}</td>
+                    <td>{{ enc.ruta.origen }} → {{ enc.ruta.destino }}</td>
+                    <td>
+                        <span class="badge-estado badge-{{ enc.estado }}">
+                            {{ enc.get_estado_display }}
+                        </span>
+                    </td>
+                    <td>{{ enc.fecha_registro|date:'d/m/Y' }}</td>
+                    <td>
+                        <a href="{% url 'encomienda_detalle' enc.pk %}" class="btn btn-sm btn-outline-primary">Ver</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        No se encontraron encomiendas
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {# Paginacion #}
+    {% if encomiendas.has_other_pages %}
+    <div class="card-footer bg-white">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% if encomiendas.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ encomiendas.previous_page_number
+}}&q={{ request.GET.q }}&estado={{ request.GET.estado }}">
+                        &laquo; Anterior
+                    </a>
+                </li>
+                {% endif %}
+                {% for num in encomiendas.paginator.page_range %}
+                <li class="page-item {% if encomiendas.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}&q={{ request.GET.q }}&estado={{
+request.GET.estado }}">{{ num }}</a>
+                </li>
+                {% endfor %}
+                {% if encomiendas.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ encomiendas.next_page_number }}&q={{
+request.GET.q }}&estado={{ request.GET.estado }}">
+                        Siguiente &raquo;
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+<div class="card-footer bg-white">
+    {% include 'partials/paginacion.html' with page_obj=encomiendas %}
+</div>F
+{% endblock %}

@@ -1,0 +1,14 @@
+<div class="row mb-4">
+    {% include 'partials/stat_card.html' with
+    label='Activas' valor=total_activas
+    icono='shipping-fast' color_hex='#0d6efd' %}
+    {% include 'partials/stat_card.html' with
+    label='En tránsito' valor=en_transito
+    icono='truck' color_hex='#0d6efd' %}
+    {% include 'partials/stat_card.html' with
+    label='Con retraso' valor=con_retraso
+    icono='exclamation-triangle' color_hex='#dc3545' %}
+    {% include 'partials/stat_card.html' with
+    label='Entregadas hoy' valor=entregadas_hoy
+    icono='check-circle' color_hex='#198754' %}
+</div>
