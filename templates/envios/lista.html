@@ -19,7 +19,7 @@
         <select name="estado" class="form-select">
             <option value="">Todos los estados</option>
             {% for valor, etiqueta in estados %}
-            <option value="{{ valor }}" {% if estado_activo==valor %}selected{% endif %}>
+            <option value="{{ valor }}" {% if estado_activo == valor %}selected{% endif %}>
                 {{ etiqueta }}
             </option>
             {% endfor %}
@@ -103,5 +103,5 @@ request.GET.q }}&estado={{ request.GET.estado }}">
 </div>
 <div class="card-footer bg-white">
     {% include 'partials/paginacion.html' with page_obj=encomiendas %}
-</div>F
+</div>
 {% endblock %}

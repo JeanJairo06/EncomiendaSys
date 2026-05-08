@@ -14,7 +14,7 @@ from django.contrib.messages.views import (
 
 from django.urls import reverse_lazy
 
-from .models import Encomienda
+from .models import Encomienda, Empleado
 from .forms import EncomiendaForm
 
 from config.choices import EstadoEnvio
@@ -95,9 +95,8 @@ class EncomiendaCreateView( LoginRequiredMixin, SuccessMessageMixin, CreateView 
 
     def form_valid(self, form):
 
-        # Asignar empleado antes de guardar
-        form.instance.empleado_registro = (
-            self.request.user.empleado
+        form.instance.empleado_registro = Empleado.objects.get(
+            email=self.request.user.email
         )
 
         return super().form_valid(form)

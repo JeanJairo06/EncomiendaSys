@@ -105,7 +105,7 @@ class MiView(CreateView):
     success_url = reverse_lazy('encomienda_lista')
 
 # ── Dashboard ───────────────────────────────────────────────
-@login_required(login_url='/mi-login/')
+@login_required(login_url='/login/')
 def dashboard(request):
     """
     Vista principal del sistema con estadísticas.

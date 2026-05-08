@@ -15,10 +15,12 @@ urlpatterns = [
     # Con parámetro UUID: <uuid:uuid>
     #path('api/encomiendas/<uuid:uuid>/', views.encomienda_api, name='encomienda_api'),
 
+    
+    
     # .as_view() convierte la clase en una función vista
-    path('', views_cbv.EncomiendaListView.as_view(), name='encomienda_lista'),
-    path('<int:pk>/', views_cbv.EncomiendaDetailView.as_view(), name='encomienda_detalle'),
-    path('nueva/', views_cbv.EncomiendaCreateView.as_view(), name='encomienda_crear'),
-    path('<int:pk>/editar/', views_cbv.EncomiendaUpdateView.as_view(), name='encomienda_editar'),
+    #path('', views_cbv.EncomiendaListView.as_view(), name='encomienda_lista'),
+    #path('<int:pk>/', views_cbv.EncomiendaDetailView.as_view(), name='encomienda_detalle'),
+    #path('nueva/', views_cbv.EncomiendaCreateView.as_view(), name='encomienda_crear'),
+    #path('<int:pk>/editar/', views_cbv.EncomiendaUpdateView.as_view(), name='encomienda_editar'),
 
 ]

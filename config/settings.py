@@ -136,6 +136,18 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-LOGIN_URL = '/accounts/login/'
+LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
+LOGOUT_REDIRECT_URL = '/login/'
+
+# Motor de sesiones (base de datos por defecto)
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+# Expirar cuando el navegador se cierra (False = no expira)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+# Tiempo de vida de la sesión en segundos (8 horas = jornada laboral)
+SESSION_COOKIE_AGE = 60 * 60 * 8
+# Solo enviar la cookie por HTTPS (activar en producción)
+SESSION_COOKIE_SECURE = False # True en producción
+# Nombre de la cookie de sesión
+SESSION_COOKIE_NAME = 'encomiendas_session'
