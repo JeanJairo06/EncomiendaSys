@@ -19,6 +19,11 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from envios import views_auth
+from rest_framework_simplejwt.views import (TokenObtainPairView,TokenRefreshView,TokenBlacklistView)
+from api.auth import EncomiendaTokenView
+
+
+
 
 admin.site.site_header = 'Sistema de Gestión de Encomiendas'
 admin.site.site_title = 'Encomiendas Admin'
@@ -34,8 +39,30 @@ urlpatterns = [
     path('logout/', views_auth.logout_view, name='logout'),
     path('perfil/', views_auth.perfil_view, name='perfil'),
 
+    # API REST
+    #path('api/v1/', include('api.urls')),
+    path('api/<version>/', include('api.urls')),
+
+    #path('api/v1/auth/token/',TokenObtainPairView.as_view(), name='token_obtain'),
+    path('api/v1/auth/token/', EncomiendaTokenView.as_view()),
+    path('api/v1/auth/token/refresh/',TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/v1/auth/token/blacklist/',TokenBlacklistView.as_view(), name='token_blacklist'),
+
+    # Documentacion
+    #path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    #path('api/docs/', SpectacularSwaggerView.as_view(), name='swagger'),
+    #path('api/redoc/', SpectacularRedocView.as_view(), name='redoc'),
+
+    
+
 ]
 
+#if settings.DEBUG:
+#    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+#    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    from silk import urls as silk_urls
+    urlpatterns += [path('silk/', include('silk.urls', namespace='silk')),]
+    urlpatterns += static(settings.STATIC_URL,document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)

@@ -27,15 +27,18 @@ class EncomiendaQuerySet(models.QuerySet):
     def con_retraso(self):
         """Encomiendas activas cuya fecha estimada ya pasó"""
         from django.utils import timezone
-        return self.activas().filter(
-        fecha_entrega_est__lt=timezone.now().date()
-        )
+        return self.activas().filter(fecha_entrega_est__lt=timezone.now().date())
     
     # ── Optimización de consultas ──────────────────
     def con_relaciones(self):
-        """Precarga las relaciones más usadas (evita el problema N+1)"""
         return self.select_related(
-        'remitente', 'destinatario', 'ruta', 'empleado_registro'
+            'remitente',
+            'destinatario',
+            'ruta',
+            'empleado_registro',
+        ).prefetch_related(
+            'historial',
+            'historial__empleado',
         )
 
 class ClienteQuerySet(models.QuerySet):

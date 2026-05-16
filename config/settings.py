@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
+from corsheaders.defaults import default_headers
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -27,9 +29,21 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', cast=bool, default=False)
 
+
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 
-
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'authorization',
+    'content-type',
+]
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -43,9 +57,17 @@ INSTALLED_APPS = [
     'envios',
     'clientes',
     'rutas',
+    # Nuevas librerías de API
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'django_filters',
+    'drf_spectacular',
+    'corsheaders',
+    'api',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -94,6 +116,57 @@ DATABASES = {
         'HOST': config('DB_HOST', default='localhost'),
         'PORT': config('DB_PORT', default='5432'),
     }
+}
+
+REST_FRAMEWORK = {
+    # Autenticación: JWT por defecto para toda la API
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'EXCEPTION_HANDLER': 'api.exceptions.encomiendas_exception_handler',
+    # Permisos: requiere autenticación por defecto
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+        #'rest_framework.permissions.AllowAny',
+    ],
+
+    # Paginación: 15 registros por página
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 15,
+    # Documentación automática con drf-spectacular
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # Filtros: django-filter como backend por defecto
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    'DEFAULT_VERSIONING_CLASS': ('rest_framework.versioning.URLPathVersioning'),
+    'ALLOWED_VERSIONS': ['v1', 'v2'], # versiones permitidas
+    'DEFAULT_VERSION': 'v1', # version si no se especifica
+    'VERSION_PARAM': 'version', # nombre del parametro en la URL
+
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/hour',
+        'user': '500/hour',
+        'empleado': '100/min',
+        'cambio_estado': '30/hour',
+        'login_attempt': '5/min',
+    },
+}
+# ── JWT: configuración de tokens ──────────────────────────────────
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), # token expira en 1 hora
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7), # refresh expira en 7 días
+    'ROTATE_REFRESH_TOKENS': True, # rotar el refresh en cada uso
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',), # Authorization: Bearer <token>
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
 }
 
 
@@ -151,3 +224,53 @@ SESSION_COOKIE_AGE = 60 * 60 * 8
 SESSION_COOKIE_SECURE = False # True en producción
 # Nombre de la cookie de sesión
 SESSION_COOKIE_NAME = 'encomiendas_session'
+# ── CORS: permitir peticiones desde el frontend ───────────────────
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",   # React/Vite
+    "http://127.0.0.1:3000",
+
+    "http://localhost:5173",   # Vite
+    "http://127.0.0.1:5173",
+
+    "http://localhost:8080",   # Vue
+    "http://127.0.0.1:8080",
+
+    "http://localhost:4200",   # Angular
+    "http://127.0.0.1:4200",
+]
+CORS_ALLOW_CREDENTIALS = True
+# En producción reemplazar por CORS_ALLOWED_ORIGINS = ['https://tu-frontend.com']
+
+# ── Documentación de la API ───────────────────────────────────────
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'API Sistema de Gestión de Encomiendas',
+    'DESCRIPTION': 'API REST para gestionar encomiendas, clientes, rutas, estados e historial.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False, # no mostrar el schema en Swagger
+    'COMPONENT_SPLIT_REQUEST': True, # esquemas separados para request y response
+    'SORT_OPERATIONS': False, # mantener el orden del router
+    'TAGS': [
+    {'name': 'Encomiendas', 'description': 'Gestión de envíos'},
+    {'name': 'Clientes', 'description': 'Listado de clientes activos'},
+    {'name': 'Rutas', 'description': 'Rutas disponibles'},
+    {'name': 'Auth', 'description': 'Autenticación JWT'},
+],
+
+}
+
+if DEBUG:
+    INSTALLED_APPS += ['silk']
+    MIDDLEWARE += ['silk.middleware.SilkyMiddleware']
+    SILKY_PYTHON_PROFILER = True
+    SILKY_META = True # mostrar queries de silk en el panel
+
+CACHES = {
+    'default': {
+    'BACKEND': 'django_redis.cache.RedisCache',
+    'LOCATION': 'redis://redis:6379/1',
+    'OPTIONS': {
+        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+    }
+    }
+}
+CACHE_TTL = 60 * 15 # 15 minutos por defecto
