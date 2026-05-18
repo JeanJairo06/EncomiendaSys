@@ -14,6 +14,8 @@ from pathlib import Path
 from decouple import config
 from datetime import timedelta
 from corsheaders.defaults import default_headers
+import os
+import sys
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -47,6 +49,7 @@ CORS_ALLOW_METHODS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -64,6 +67,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'corsheaders',
     'api',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -273,4 +277,58 @@ CACHES = {
     }
     }
 }
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://redis:6379/1')
 CACHE_TTL = 60 * 15 # 15 minutos por defecto
+ASGI_APPLICATION = 'config.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            # ── Conexion ────────────────────────────────────────────
+            'hosts': [REDIS_URL],
+            # Para Redis con autenticacion:
+            # 'hosts': ['redis://:password@redis:6379/1'],
+            # Para Redis con SSL (produccion):
+            # 'hosts': ['rediss://redis:6380/1'],
+
+            # ── Identificacion ──────────────────────────────────────
+            # Prefijo para las claves en Redis.
+            # Si se comparte Redis entre proyectos, usar nombre distinto.
+            'prefix': 'encomiendas',
+            # Las claves apareceran como: encomiendas:group:encomiendas_global
+
+            # ── Mensajes ────────────────────────────────────────────
+            # Segundos antes de que un mensaje no leido se elimine.
+            # Si un consumer esta caido y no lee mensajes, estos expiran.
+            'expiry': 60,
+
+            # Max mensajes en cola de un canal.
+            # Si se llena (consumer muy lento), los nuevos se descartan.
+            'capacity': 100,
+
+             # Capacidad diferente por tipo de canal:
+            'channel_capacity': {
+                # El dashboard puede recibir muchas actualizaciones de stats
+                'ws.connect.*': 200,
+                # Los canales HTTP normales con menos mensajes
+                'http.request': 200,
+            },
+            # ── Grupos ──────────────────────────────────────────────
+            # Segundos antes de que un grupo inactivo se elimine.
+            # 86400 = 24 horas. Los grupos se recrean al conectarse.
+            'group_expiry': 86400,
+            # ── Seguridad (opcional) ─────────────────────────────────
+            # Cifrar los mensajes en Redis.
+            # Util si Redis es accesible desde fuera del servidor.
+            # 'symmetric_encryption_keys': [os.environ.get('REDIS_SECRET')],
+        },
+    },
+}
+
+if 'pytest' in sys.modules or 'test' in sys.argv:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }

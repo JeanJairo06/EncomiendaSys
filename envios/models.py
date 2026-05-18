@@ -12,7 +12,8 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from decimal import Decimal, ROUND_HALF_UP
 from .querysets import EncomiendaQuerySet
-
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 
 # =====================================================
@@ -159,6 +160,11 @@ class Encomienda(models.Model):
             from django.utils import timezone
             self.fecha_entrega_real = timezone.now().date()
         self.save()
+        self._notificar_cambio_estado(
+        estado_anterior=estado_anterior,
+        estado_nuevo=nuevo_estado,
+        empleado=empleado
+    )
  
         # Registrar en el historial
         HistorialEstado.objects.create(
@@ -183,6 +189,64 @@ class Encomienda(models.Model):
         return costo.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
 
+    def _notificar_cambio_estado(self, estado_anterior, estado_nuevo, empleado):
+        """
+        Notifica por WebSocket cuando una encomienda cambia de estado.
+        """
+
+        channel_layer = get_channel_layer()
+
+        if channel_layer is None:
+            return
+
+        mensaje = {
+            'encomienda_id': self.pk,
+            'codigo': self.codigo,
+            'estado_anterior': estado_anterior,
+            'estado_nuevo': estado_nuevo,
+            'empleado': str(empleado) if empleado else 'Sistema',
+            'timestamp': timezone.now().isoformat(),
+        }
+
+        async_to_sync(channel_layer.group_send)(
+            'encomiendas_global',
+            {
+                'type': 'encomienda_estado_cambio',
+                **mensaje,
+            }
+        )
+        async_to_sync(channel_layer.group_send)(
+            f'encomienda_{self.pk}',
+            {
+                'type': 'encomienda_estado_cambio',
+                **mensaje,
+            }
+        )
+        async_to_sync(channel_layer.group_send)(
+            'dashboard',
+            {
+                'type': 'encomienda_estado_cambio',
+                **mensaje,
+            }
+        )
+
+        stats = {
+            'activas': Encomienda.objects.activas().count(),
+            'en_transito': Encomienda.objects.en_transito().count(),
+            'con_retraso': Encomienda.objects.con_retraso().count(),
+            'entregadas_hoy': Encomienda.objects.filter(
+                estado='EN',
+                fecha_entrega_real=timezone.now().date()
+            ).count(),
+        }
+
+        async_to_sync(channel_layer.group_send)(
+            'dashboard',
+            {
+                'type': 'dashboard_actualizar',
+                'stats': stats,
+            }
+        )
     # ==============================
     # Métodos de clase
     # ==============================

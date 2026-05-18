@@ -1,87 +1,245 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard — Encomiendas{% endblock %}
+
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <h2 class="h3"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h2>
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Dashboard</h2>
+    <span id="ws-badge" class="badge bg-secondary">Conectando...</span>
 </div>
 
-<div class="row mb-4">
-
-    {% with label='Activas' valor=total_activas icono='shipping-fast' color_hex='#0d6efd' %}
-        {% include 'partials/stat_card.html' %}
-    {% endwith %}
-
-    {% with label='En tránsito' valor=en_transito icono='truck' color_hex='#0d6efd' %}
-        {% include 'partials/stat_card.html' %}
-    {% endwith %}
-
-    {% with label='Con retraso' valor=con_retraso icono='exclamation-triangle' color_hex='#dc3545' %}
-        {% include 'partials/stat_card.html' %}
-    {% endwith %}
-
-    {% with label='Entregadas hoy' valor=entregadas_hoy icono='check-circle' color_hex='#198754' %}
-        {% include 'partials/stat_card.html' %}
-    {% endwith %}
-
-</div>
-
-<div class="row mb-4">
-    {% for label, valor, color, icono in stats %}
+<div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card bg-{{ color }} text-white shadow-sm mb-3">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="card-title">{{ label }}</h6>
-                    <h2 class="mb-0">{{ valor }}</h2>
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <div class="fs-1">&#128230;</div>
+                <div class="fs-2 fw-bold text-primary" id="stat-activas">
+                    {{ stats.activas }}
                 </div>
-                <i class="fas fa-{{ icono }} fa-2x"></i>
+                <div class="text-muted">Activas</div>
             </div>
         </div>
     </div>
-    {% endfor %}
-</div>
-<!-- Últimas encomiendas -->
-<div class="card shadow">
-    <div class="card-header bg-white">
-        <h5 class="mb-0">Últimas encomiendas registradas</h5>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <div class="fs-1">&#128666;</div>
+                <div class="fs-2 fw-bold text-warning" id="stat-en-transito">
+                    {{ stats.en_transito }}
+                </div>
+                <div class="text-muted">En tránsito</div>
+            </div>
+        </div>
     </div>
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Remitente</th>
-                    <th>Destino</th>
-                    <th>Estado</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for enc in ultimas %}
-                <tr>
-                    <td><code>{{ enc.codigo }}</code></td>
-                    <td>{{ enc.remitente.nombre_completo }}</td>
-                    <td>{{ enc.ruta.destino }}</td>
-                    <td>
-                        <span class="badge bg-{% if enc.esta_en_transito %}primary
- {% elif enc.esta_entregada %}success
- {% elif enc.tiene_retraso %}danger
- {% else %}secondary{% endif %}">
-                            {{ enc.get_estado_display }}
-                        </span>
-                    </td>
-                    <td><a href="{% url 'encomienda_detalle' enc.pk %}" class="btn btn-sm
-btn-outline-primary">Ver</a></td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="text-center py-3">No hay encomiendas</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <div class="fs-1">&#9888;</div>
+                <div class="fs-2 fw-bold text-danger" id="stat-retraso">
+                    {{ stats.con_retraso }}
+                </div>
+                <div class="text-muted">Con retraso</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <div class="fs-1">&#9989;</div>
+                <div class="fs-2 fw-bold text-success" id="stat-entregadas">
+                    {{ stats.entregadas_hoy }}
+                </div>
+                <div class="text-muted">Entregadas hoy</div>
+            </div>
+        </div>
     </div>
 </div>
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between">
+        <span>Feed de actividad</span>
+        <small class="text-muted" id="feed-count">0 eventos</small>
+    </div>
+
+    <ul class="list-group list-group-flush" id="feed-lista">
+        <li class="list-group-item text-muted">Esperando eventos...</li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+const WS_URL = WS_PROTOCOL + window.location.host + '/ws/dashboard/';
+
+let wsCliente;
+let ws;
+let eventoCount = 0;
+
+const ESTADOS = {
+    PE: 'Pendiente',
+    TR: 'En tránsito',
+    DE: 'En destino',
+    EN: 'Entregado',
+    DV: 'Devuelto'
+};
+
+const COLORES_BADGE = {
+    PE: 'secondary',
+    TR: 'primary',
+    DE: 'warning',
+    EN: 'success',
+    DV: 'danger'
+};
+
+const ICONOS = {
+    PE: '⏳',
+    TR: '🚚',
+    DE: '📍',
+    EN: '✅',
+    DV: '↩'
+};
+
+function conectarWebSocket() {
+    wsCliente = new EncomiendaWebSocket(WS_URL, {
+        badgeId: 'ws-badge',
+
+        onConectado: function(socket) {
+            ws = socket;
+
+            wsCliente.enviar({
+                tipo: 'solicitar_stats'
+            });
+        },
+
+        onMensaje: function(data) {
+            if (data.tipo === 'stats_iniciales' || data.tipo === 'stats_actualizado') {
+                actualizarContador('stat-activas', data.stats.activas);
+                actualizarContador('stat-en-transito', data.stats.en_transito);
+                actualizarContador('stat-retraso', data.stats.con_retraso);
+                actualizarContador('stat-entregadas', data.stats.entregadas_hoy);
+            }
+
+            if (data.tipo === 'estado_cambio') {
+                agregarAlFeed(data);
+                mostrarToast(data);
+            }
+
+            if (data.tipo === 'error') {
+                console.warn('Error recibido del WebSocket:', data);
+            }
+        }
+    });
+
+    wsCliente.conectar();
+}
+
+function actualizarContador(id, nuevoValor) {
+    const el = document.getElementById(id);
+
+    if (!el) return;
+
+    const valorAnterior = parseInt(el.textContent);
+
+    if (valorAnterior === nuevoValor) return;
+
+    el.style.transition = 'transform 0.2s';
+    el.style.transform = 'scale(1.4)';
+    el.textContent = nuevoValor;
+
+    setTimeout(() => {
+        el.style.transform = 'scale(1)';
+    }, 250);
+}
+
+function agregarAlFeed(data) {
+    eventoCount++;
+
+    document.getElementById('feed-count').textContent = eventoCount + ' eventos';
+
+    const lista = document.getElementById('feed-lista');
+
+    if (eventoCount === 1) {
+        lista.innerHTML = '';
+    }
+
+    const hora = new Date(data.timestamp).toLocaleTimeString('es-PE');
+
+    const li = document.createElement('li');
+    li.className = 'list-group-item d-flex align-items-center gap-2 py-2';
+
+    li.innerHTML = `
+        <span class="fs-5">${ICONOS[data.estado_nuevo] || ''}</span>
+
+        <div class="flex-grow-1">
+            <strong>${data.codigo}</strong>
+            <span class="text-muted"> — </span>
+
+            <span class="badge bg-${COLORES_BADGE[data.estado_anterior] || 'secondary'}">
+                ${ESTADOS[data.estado_anterior] || data.estado_anterior}
+            </span>
+
+            →
+
+            <span class="badge bg-${COLORES_BADGE[data.estado_nuevo] || 'secondary'}">
+                ${ESTADOS[data.estado_nuevo] || data.estado_nuevo}
+            </span>
+
+            <small class="d-block text-muted">
+                Por: ${data.empleado} &bull; ${hora}
+            </small>
+        </div>
+    `;
+
+    lista.insertBefore(li, lista.firstChild);
+
+    while (lista.children.length > 20) {
+        lista.removeChild(lista.lastChild);
+    }
+}
+
+function mostrarToast(data) {
+    const container = document.getElementById('toast-container') || crearToastContainer();
+
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${COLORES_BADGE[data.estado_nuevo] || 'secondary'} alert-dismissible fade show`;
+    toast.style.cssText = 'min-width: 300px; box-shadow: 0 2px 8px rgba(0,0,0,.15);';
+
+    toast.innerHTML = `
+        <div class="d-flex align-items-center gap-2">
+            <span class="fs-4">${ICONOS[data.estado_nuevo] || ''}</span>
+
+            <div>
+                <strong>${data.codigo}</strong><br>
+                ${ESTADOS[data.estado_anterior] || data.estado_anterior}
+                &rarr;
+                ${ESTADOS[data.estado_nuevo] || data.estado_nuevo}<br>
+                <small>Por: ${data.empleado}</small>
+            </div>
+        </div>
+
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+
+function crearToastContainer() {
+    const div = document.createElement('div');
+
+    div.id = 'toast-container';
+    div.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';
+
+    document.body.appendChild(div);
+
+    return div;
+}
+
+document.addEventListener('DOMContentLoaded', conectarWebSocket);
+</script>
 {% endblock %}

@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import views_cbv
+from .views_async import dashboard_stats_async
 
 
 urlpatterns = [
@@ -15,7 +16,7 @@ urlpatterns = [
     # Con parámetro UUID: <uuid:uuid>
     #path('api/encomiendas/<uuid:uuid>/', views.encomienda_api, name='encomienda_api'),
 
-    
+    path('dashboard/stats/', dashboard_stats_async, name='dashboard_stats_async'),
     
     # .as_view() convierte la clase en una función vista
     #path('', views_cbv.EncomiendaListView.as_view(), name='encomienda_lista'),

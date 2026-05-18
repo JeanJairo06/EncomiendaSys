@@ -26,3 +26,9 @@ pytest-django==4.8.0
 factory-boy==3.3.0
 faker==24.0.0
 django-silk==5.1.0
+httpx
+channels==4.0.0
+channels-redis==4.1.0
+daphne==4.0.0
+pytest-asyncio
+redis==5.0.1

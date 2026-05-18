@@ -21,7 +21,11 @@ from django.conf.urls.static import static
 from envios import views_auth
 from rest_framework_simplejwt.views import (TokenObtainPairView,TokenRefreshView,TokenBlacklistView)
 from api.auth import EncomiendaTokenView
-
+from drf_spectacular.views import (
+    SpectacularAPIView,       # endpoint schema OpenAPI
+    SpectacularSwaggerView,   # Swagger UI interactivo
+    SpectacularRedocView,     # ReDoc documentación limpia
+)#pagina 54
 
 
 
@@ -51,7 +55,7 @@ urlpatterns = [
     # Documentacion
     #path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     #path('api/docs/', SpectacularSwaggerView.as_view(), name='swagger'),
-    #path('api/redoc/', SpectacularRedocView.as_view(), name='redoc'),
+    path('api/redoc/', SpectacularRedocView.as_view(), name='redoc'),
 
     
 
