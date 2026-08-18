@@ -16,7 +16,7 @@ services:
     env_file:
       - .env  # variables de entorno
     environment:
-    - REDIS_URL=redis://redis:6379/1
+      - REDIS_URL=redis://redis:6379/1
     depends_on:
       - db
       - redis
@@ -33,7 +33,7 @@ services:
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin
-    restart: always
+    restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
